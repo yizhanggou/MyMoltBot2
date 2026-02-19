@@ -359,9 +359,9 @@
 
       <div class="slider-row">
         <span class="slider-label">缩放</span>
-        <input type="range" id="sliderScale" min="0.3" max="3" step="0.05" value="1.0"
+        <input type="range" id="sliderScale" min="0.3" max="3" step="0.05" value="2.2"
                oninput="updateSliderVal(this,'valScale','x')">
-        <span class="slider-val" id="valScale">1.0x</span>
+        <span class="slider-val" id="valScale">2.2x</span>
       </div>
 
       <div class="slider-row">
@@ -436,7 +436,7 @@ const HOLE = {
 };
 
 // User adjustable
-let userScale = 1.0;
+let userScale = 2.2;
 let userOffX  = 0;
 let userOffY  = 0;
 let userAlpha = 1.0;
@@ -596,12 +596,12 @@ function updateSliderVal(el, valId, unit) {
 }
 
 function resetSettings() {
-  document.getElementById('sliderScale').value = 1.0;
+  document.getElementById('sliderScale').value = 2.2;
   document.getElementById('sliderOffX').value  = 0;
   document.getElementById('sliderOffY').value  = 0;
   document.getElementById('sliderAlpha').value = 1.0;
-  userScale = 1.0; userOffX = 0; userOffY = 0; userAlpha = 1.0;
-  document.getElementById('valScale').textContent = '1.0x';
+  userScale = 2.2; userOffX = 0; userOffY = 0; userAlpha = 1.0;
+  document.getElementById('valScale').textContent = '2.2x';
   document.getElementById('valOffX').textContent  = '0px';
   document.getElementById('valOffY').textContent  = '0px';
   document.getElementById('valAlpha').textContent = '1.0';
