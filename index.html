@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>名画变脸 · 蒙娜丽莎</title>
+  <style>
+    /* ─── Reset & Base ─── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gold:    #c8a96e;
+      --gold-light: #e8d5a3;
+      --dark:    #1a1410;
+      --dark2:   #2a1f14;
+      --surface: #261c10;
+      --text:    #f0e6d3;
+      --text-muted: #9d8a6e;
+      --accent:  #a67c52;
+      --radius:  16px;
+      --shadow:  0 8px 40px rgba(0,0,0,0.6);
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--dark);
+      color: var(--text);
+      font-family: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif;
+    }
+
+    /* ─── Layout ─── */
+    .app {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 40px;
+      gap: 28px;
+    }
+
+    /* ─── Header ─── */
+    header {
+      text-align: center;
+    }
+    header h1 {
+      font-size: clamp(1.6rem, 5vw, 2.4rem);
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      background: linear-gradient(135deg, var(--gold-light), var(--gold));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    header p {
+      margin-top: 6px;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      letter-spacing: 0.04em;
+    }
+
+    /* ─── Canvas Stage ─── */
+    .stage-wrap {
+      position: relative;
+      width: 100%;
+      max-width: 540px;
+    }
+
+    .stage-card {
+      background: var(--surface);
+      border: 1px solid rgba(200, 169, 110, 0.25);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    #mainCanvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      cursor: default;
+    }
+
+    /* Overlay hint shown before camera starts */
+    .hint-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      background: rgba(26,20,16,0.72);
+      backdrop-filter: blur(4px);
+      border-radius: var(--radius);
+      transition: opacity 0.4s;
+      pointer-events: none;
+    }
+    .hint-overlay.hidden { opacity: 0; }
+    .hint-icon { font-size: 3rem; }
+    .hint-overlay p {
+      font-size: 0.95rem;
+      color: var(--gold-light);
+      text-align: center;
+      padding: 0 24px;
+    }
+
+    /* ─── Controls ─── */
+    .controls {
+      width: 100%;
+      max-width: 540px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 12px;
+    }
+
+    .btn {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 14px 20px;
+      border: none;
+      border-radius: 12px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+      letter-spacing: 0.03em;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #c8a96e, #a67c52);
+      color: #1a1410;
+      box-shadow: 0 4px 20px rgba(200,169,110,0.35);
+    }
+    .btn-primary:hover:not(:disabled) {
+      box-shadow: 0 6px 28px rgba(200,169,110,0.5);
+    }
+
+    .btn-danger {
+      background: rgba(200,80,60,0.15);
+      color: #f08070;
+      border: 1px solid rgba(200,80,60,0.3);
+    }
+    .btn-danger:hover:not(:disabled) { background: rgba(200,80,60,0.25); }
+
+    .btn-success {
+      background: linear-gradient(135deg, #5a9a6e, #3d7a52);
+      color: #f0f8f4;
+      box-shadow: 0 4px 20px rgba(90,154,110,0.35);
+    }
+    .btn-success:hover:not(:disabled) {
+      box-shadow: 0 6px 28px rgba(90,154,110,0.5);
+    }
+
+    .btn-secondary {
+      background: rgba(200,169,110,0.1);
+      color: var(--gold-light);
+      border: 1px solid rgba(200,169,110,0.25);
+    }
+    .btn-secondary:hover:not(:disabled) { background: rgba(200,169,110,0.2); }
+
+    /* ─── Sliders ─── */
+    .sliders-panel {
+      background: var(--surface);
+      border: 1px solid rgba(200,169,110,0.15);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .sliders-panel h3 {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .slider-label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      width: 52px;
+      flex-shrink: 0;
+    }
+    input[type=range] {
+      flex: 1;
+      height: 4px;
+      appearance: none;
+      background: rgba(200,169,110,0.2);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      appearance: none;
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      background: var(--gold);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    }
+    .slider-val {
+      font-size: 0.82rem;
+      color: var(--gold);
+      width: 36px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    /* ─── Mirror toggle ─── */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .toggle-label { font-size: 0.85rem; color: var(--text-muted); }
+    .toggle {
+      position: relative;
+      width: 44px; height: 24px;
+      background: rgba(200,169,110,0.15);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+      border: 1px solid rgba(200,169,110,0.25);
+    }
+    .toggle.on { background: rgba(200,169,110,0.5); }
+    .toggle::after {
+      content: '';
+      position: absolute;
+      top: 3px; left: 3px;
+      width: 16px; height: 16px;
+      background: var(--gold-light);
+      border-radius: 50%;
+      transition: transform 0.2s;
+    }
+    .toggle.on::after { transform: translateX(20px); }
+
+    /* ─── Status bar ─── */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+    }
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      flex-shrink: 0;
+    }
+    .status-dot.active {
+      background: #5cb85c;
+      box-shadow: 0 0 6px rgba(92,184,92,0.6);
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* ─── Footer ─── */
+    footer {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      text-align: center;
+      padding-top: 4px;
+    }
+
+    /* ─── Saved photo preview ─── */
+    #photoPreview {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background: rgba(0,0,0,0.85);
+      backdrop-filter: blur(8px);
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 20px;
+      padding: 24px;
+    }
+    #photoPreview.show { display: flex; }
+    #photoPreview img {
+      max-width: 100%;
+      max-height: 70vh;
+      border-radius: 12px;
+      box-shadow: 0 12px 60px rgba(0,0,0,0.8);
+    }
+    .preview-actions {
+      display: flex;
+      gap: 12px;
+    }
+    .preview-actions .btn { flex: none; padding: 12px 28px; }
+
+    /* ─── Responsive ─── */
+    @media (max-width: 400px) {
+      .btn { padding: 12px 10px; font-size: 0.85rem; }
+      .btn-row { gap: 8px; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Header -->
+  <header>
+    <h1>🖼️ 名画变脸</h1>
+    <p>蒙娜丽莎 · 达芬奇 · 1503</p>
+  </header>
+
+  <!-- Stage -->
+  <div class="stage-wrap">
+    <div class="stage-card">
+      <canvas id="mainCanvas"></canvas>
+    </div>
+    <div class="hint-overlay" id="hintOverlay">
+      <div class="hint-icon">📷</div>
+      <p>点击「开启摄像头」<br>把你的脸套上蒙娜丽莎的身体</p>
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <!-- Status -->
+    <div class="status-bar">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">摄像头未开启</span>
+    </div>
+
+    <!-- Main buttons -->
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btnCamera" onclick="toggleCamera()">
+        📷 开启摄像头
+      </button>
+      <button class="btn btn-success" id="btnCapture" onclick="capture()" disabled>
+        📸 拍照保存
+      </button>
+    </div>
+
+    <!-- Settings panel -->
+    <div class="sliders-panel">
+      <h3>画面调节</h3>
+
+      <div class="slider-row">
+        <span class="slider-label">缩放</span>
+        <input type="range" id="sliderScale" min="0.3" max="3" step="0.05" value="1.0"
+               oninput="updateSliderVal(this,'valScale','x')">
+        <span class="slider-val" id="valScale">1.0x</span>
+      </div>
+
+      <div class="slider-row">
+        <span class="slider-label">上下</span>
+        <input type="range" id="sliderOffY" min="-200" max="200" step="2" value="0"
+               oninput="updateSliderVal(this,'valOffY','px')">
+        <span class="slider-val" id="valOffY">0px</span>
+      </div>
+
+      <div class="slider-row">
+        <span class="slider-label">左右</span>
+        <input type="range" id="sliderOffX" min="-200" max="200" step="2" value="0"
+               oninput="updateSliderVal(this,'valOffX','px')">
+        <span class="slider-val" id="valOffX">0px</span>
+      </div>
+
+      <div class="slider-row">
+        <span class="slider-label">透明度</span>
+        <input type="range" id="sliderAlpha" min="0.3" max="1" step="0.05" value="1"
+               oninput="updateSliderVal(this,'valAlpha','')">
+        <span class="slider-val" id="valAlpha">1.0</span>
+      </div>
+
+      <div class="toggle-row" style="margin-top:4px">
+        <div class="toggle on" id="toggleMirror" onclick="toggleMirror()"></div>
+        <span class="toggle-label">镜像翻转（推荐开启）</span>
+      </div>
+    </div>
+
+    <!-- Secondary buttons -->
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="resetSettings()">↺ 重置设置</button>
+      <button class="btn btn-danger" id="btnStop" onclick="stopCamera()" disabled>⏹ 关闭摄像头</button>
+    </div>
+  </div>
+
+  <footer>用摄像头实时预览 · 点拍照保存合影</footer>
+</div>
+
+<!-- Photo preview modal -->
+<div id="photoPreview">
+  <img id="previewImg" src="" alt="合拍照片" />
+  <div class="preview-actions">
+    <a id="downloadLink" class="btn btn-success" download="mona_lisa_me.png">💾 下载</a>
+    <button class="btn btn-secondary" onclick="closePreview()">✕ 关闭</button>
+  </div>
+</div>
+
+<!-- Hidden video element -->
+<video id="video" autoplay playsinline muted style="display:none"></video>
+
+<script>
+// ─── State ───────────────────────────────────────────────
+const canvas  = document.getElementById('mainCanvas');
+const ctx     = canvas.getContext('2d');
+const video   = document.getElementById('video');
+
+let monaImg   = null;
+let stream    = null;
+let rafId     = null;
+let mirror    = true;
+
+// Face hole position (relative to image, from analysis):
+// left=0.3505, top=0.1353, right=0.5781, bottom=0.3593
+// center cx=0.4643, cy=0.2473
+// size w=0.2276, h=0.2240
+const HOLE = {
+  cx: 0.4643,  // center x relative
+  cy: 0.2473,  // center y relative
+  w:  0.2276,  // width relative
+  h:  0.2240,  // height relative
+};
+
+// User adjustable
+let userScale = 1.0;
+let userOffX  = 0;
+let userOffY  = 0;
+let userAlpha = 1.0;
+
+// ─── Init ─────────────────────────────────────────────────
+function init() {
+  monaImg = new Image();
+  monaImg.onload = () => {
+    // Set canvas to image aspect ratio, max 540px wide display handled by CSS
+    canvas.width  = monaImg.naturalWidth;
+    canvas.height = monaImg.naturalHeight;
+    drawStatic();
+  };
+  monaImg.src = 'mona_lisa.png';
+}
+
+function drawStatic() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  // Light grey placeholder for hole area
+  const hx = HOLE.cx * canvas.width;
+  const hy = HOLE.cy * canvas.height;
+  const hw = HOLE.w  * canvas.width;
+  const hh = HOLE.h  * canvas.height;
+  ctx.save();
+  ctx.beginPath();
+  ctx.ellipse(hx, hy, hw/2, hh/2, 0, 0, Math.PI*2);
+  ctx.fillStyle = 'rgba(100,80,60,0.3)';
+  ctx.fill();
+  ctx.restore();
+  if (monaImg) ctx.drawImage(monaImg, 0, 0);
+}
+
+// ─── Camera ───────────────────────────────────────────────
+async function toggleCamera() {
+  if (stream) { stopCamera(); return; }
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false
+    });
+    video.srcObject = stream;
+    await video.play();
+    setStatus(true, '摄像头已开启 · 请将脸部对准空洞');
+    document.getElementById('hintOverlay').classList.add('hidden');
+    document.getElementById('btnCamera').innerHTML  = '📷 重启摄像头';
+    document.getElementById('btnCapture').disabled  = false;
+    document.getElementById('btnStop').disabled     = false;
+    startLoop();
+  } catch(e) {
+    alert('无法开启摄像头：' + e.message);
+  }
+}
+
+function stopCamera() {
+  if (stream) {
+    stream.getTracks().forEach(t => t.stop());
+    stream = null;
+  }
+  if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+  setStatus(false, '摄像头已关闭');
+  document.getElementById('hintOverlay').classList.remove('hidden');
+  document.getElementById('btnCamera').innerHTML  = '📷 开启摄像头';
+  document.getElementById('btnCapture').disabled  = true;
+  document.getElementById('btnStop').disabled     = true;
+  drawStatic();
+}
+
+// ─── Render loop ──────────────────────────────────────────
+function startLoop() {
+  function frame() {
+    drawFrame();
+    rafId = requestAnimationFrame(frame);
+  }
+  rafId = requestAnimationFrame(frame);
+}
+
+function drawFrame() {
+  if (!monaImg || video.readyState < 2) return;
+
+  const W = canvas.width;
+  const H = canvas.height;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // ── 1. Draw camera into the face hole ──
+  const holeCX = HOLE.cx * W;
+  const holeCY = HOLE.cy * H;
+  const holeW  = HOLE.w  * W;
+  const holeH  = HOLE.h  * H;
+
+  // Scale relative to hole size; camera frame fills hole with user scale
+  const vAspect = video.videoWidth / video.videoHeight;
+  const hAspect = holeW / holeH;
+
+  let drawW, drawH;
+  if (vAspect > hAspect) {
+    drawH = holeH * userScale;
+    drawW = drawH * vAspect;
+  } else {
+    drawW = holeW * userScale;
+    drawH = drawW / vAspect;
+  }
+
+  const dx = holeCX - drawW / 2 + userOffX;
+  const dy = holeCY - drawH / 2 + userOffY;
+
+  // Clip to ellipse of hole
+  ctx.save();
+  ctx.beginPath();
+  ctx.ellipse(holeCX + userOffX * 0, holeCY + userOffY * 0,
+              holeW * 0.52 * userScale, holeH * 0.52 * userScale,
+              0, 0, Math.PI * 2);
+  // Use a rectangular clip that's generous — let the painting overlay mask the rest
+  ctx.restore();
+
+  ctx.save();
+  ctx.globalAlpha = userAlpha;
+  if (mirror) {
+    ctx.translate(dx + drawW, dy);
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, 0, 0, drawW, drawH);
+  } else {
+    ctx.drawImage(video, dx, dy, drawW, drawH);
+  }
+  ctx.restore();
+
+  // ── 2. Draw Mona Lisa on top ──
+  ctx.drawImage(monaImg, 0, 0, W, H);
+}
+
+// ─── Capture ──────────────────────────────────────────────
+function capture() {
+  if (!stream) return;
+  const dataURL = canvas.toDataURL('image/png');
+  const img = document.getElementById('previewImg');
+  img.src = dataURL;
+  const link = document.getElementById('downloadLink');
+  link.href = dataURL;
+  document.getElementById('photoPreview').classList.add('show');
+}
+
+function closePreview() {
+  document.getElementById('photoPreview').classList.remove('show');
+}
+
+// ─── Settings ─────────────────────────────────────────────
+function updateSliderVal(el, valId, unit) {
+  const v = parseFloat(el.value);
+  const display = unit === 'x'  ? v.toFixed(1) + 'x'
+                : unit === 'px' ? v + 'px'
+                :                 v.toFixed(2);
+  document.getElementById(valId).textContent = display;
+  userScale = parseFloat(document.getElementById('sliderScale').value);
+  userOffX  = parseFloat(document.getElementById('sliderOffX').value);
+  userOffY  = parseFloat(document.getElementById('sliderOffY').value);
+  userAlpha = parseFloat(document.getElementById('sliderAlpha').value);
+}
+
+function resetSettings() {
+  document.getElementById('sliderScale').value = 1.0;
+  document.getElementById('sliderOffX').value  = 0;
+  document.getElementById('sliderOffY').value  = 0;
+  document.getElementById('sliderAlpha').value = 1.0;
+  userScale = 1.0; userOffX = 0; userOffY = 0; userAlpha = 1.0;
+  document.getElementById('valScale').textContent = '1.0x';
+  document.getElementById('valOffX').textContent  = '0px';
+  document.getElementById('valOffY').textContent  = '0px';
+  document.getElementById('valAlpha').textContent = '1.0';
+}
+
+function toggleMirror() {
+  mirror = !mirror;
+  document.getElementById('toggleMirror').classList.toggle('on', mirror);
+}
+
+// ─── Status ───────────────────────────────────────────────
+function setStatus(active, text) {
+  document.getElementById('statusDot').classList.toggle('active', active);
+  document.getElementById('statusText').textContent = text;
+}
+
+// ─── Keyboard ─────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' || e.key === ' ') capture();
+  if (e.key === 'Escape') closePreview();
+});
+
+// Close preview on backdrop click
+document.getElementById('photoPreview').addEventListener('click', function(e) {
+  if (e.target === this) closePreview();
+});
+
+init();
+</script>
+</body>
+</html>
